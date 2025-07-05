@@ -8,6 +8,13 @@ if _G.AutoRob == true then warn("Auto Rob already loaded.") return nil end
 _G.AutoRob = true
 print('Auto robber loaded')
 
+coroutine.wrap(function()
+    while true do
+        task.wait(0.05)
+        game.ReplicatedStorage.Remotes.Rebirth:InvokeServer()
+    end
+end)()
+
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
@@ -215,10 +222,3 @@ while true do
         break
     end
 end
-
-coroutine.wrap(function()
-    while true do
-        task.wait(0.05)
-        game.ReplicatedStorage.Remotes.Rebirth:InvokeServer()
-    end
-end)()
