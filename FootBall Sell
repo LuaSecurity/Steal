@@ -1,0 +1,124 @@
+repeat wait() until game:IsLoaded()
+repeat wait() until game.Players.LocalPlayer.Character
+repeat wait() until game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+wait(2)
+
+if _G.AutoRob then warn("Auto Rob já estava ativo.") return end
+_G.AutoRob = true
+print("Auto robber carregado")
+queue_on_teleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/LuaSecurity/Steal/refs/heads/main/Football'))()")
+
+local Players = game:GetService("Players")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local request = request or http_request or syn.request
+local LocalPlayer = Players.LocalPlayer
+local Bases = workspace:WaitForChild("Map"):WaitForChild("Bases")
+
+local function parseText(text)
+	text = text:gsub("[$/s]", ""):upper()
+	local num = tonumber(text:match("[%.%d]+")) or 0
+	if text:find("K") then num *= 1000 end
+	return num
+end
+
+local function hasNPC(base, padNum)
+	local ip = base:FindFirstChild("Important", true)
+	local per = ip and ip:FindFirstChild("NPCPads", true)
+	local p = per and per:FindFirstChild(tostring(padNum))
+	return p and p:FindFirstChild("Character") ~= nil
+end
+
+local function triggerPrompt(npcChar)
+	local prompt = npcChar:FindFirstChild("SlotPrompt", true)
+	if prompt and prompt:IsA("ProximityPrompt") then
+		LocalPlayer.Character:PivotTo(prompt.Parent.CFrame + Vector3.new(0,2,0))
+		task.wait(0.1)
+		fireproximityprompt(prompt)
+		task.wait(0.2)
+		return true
+	end
+	return false
+end
+
+local function switchServer()
+	pcall(function()
+		if #Players:GetPlayers() <= 1 then
+			LocalPlayer:Kick("\nReentrando...")
+			wait()
+			TeleportService:Teleport(game.PlaceId, LocalPlayer)
+			return
+		end
+		local servers, cursor = {}, ""
+		repeat
+			local req = request({
+				Url = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Desc&limit=100&excludeFullGames=true" .. (cursor ~= "" and "&cursor="..cursor or "")
+			})
+			local body = HttpService:JSONDecode(req.Body)
+			if body and body.data then
+				for _,v in ipairs(body.data) do
+					if v.playing < v.maxPlayers and v.id ~= game.JobId then
+						table.insert(servers, v.id)
+					end
+				end
+				cursor = body.nextPageCursor or ""
+			else break end
+		until cursor == ""
+		if #servers > 0 then
+			TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(#servers)], LocalPlayer)
+		else
+			TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+		end
+	end)
+end
+
+local function getMyBase()
+	for _, base in ipairs(Bases:GetChildren()) do
+		for _, d in ipairs(base:GetDescendants()) do
+			if d:IsA("TextLabel") and d.Text == LocalPlayer.Name.."'s Slot" then
+				return base
+			end
+		end
+	end
+	return nil
+end
+
+while true do
+	local totalNPCs = 0
+	local myBase = getMyBase()
+
+	if myBase then
+		myBase.Important.RobberyDeposit.Size = Vector3.new(2000,100,2000)
+		local pads = myBase.Important:FindFirstChild("NPCPads", true)
+		for pad = 1,10 do
+			local node = pads and pads:FindFirstChild(tostring(pad))
+			if node and node:FindFirstChild("Character") then
+				if triggerPrompt(node.Character) then
+					totalNPCs += 1
+				end
+			end
+		end
+	end
+
+	for i = 1,8 do
+		local base = Bases:FindFirstChild(tostring(i))
+		if base and base ~= myBase then
+			local pads = base:FindFirstChild("Important", true):FindFirstChild("NPCPads", true)
+			for pad = 1,10 do
+				local node = pads and pads:FindFirstChild(tostring(pad))
+				if node and node:FindFirstChild("Character") then
+					if triggerPrompt(node.Character) then
+						totalNPCs += 1
+					end
+				end
+			end
+		end
+	end
+
+	if totalNPCs == 0 then
+		switchServer()
+		break
+	end
+
+	task.wait(1)
+end
