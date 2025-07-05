@@ -108,7 +108,7 @@ while true do
 											local prompt = npcChar:FindFirstChild("SlotPrompt", true)
 											if prompt and prompt:IsA("ProximityPrompt") then
 												LocalPlayer.Character:PivotTo(prompt.Parent.CFrame + Vector3.new(0, 2, 0))
-												task.wait(1)
+												task.wait(0.1)
 												fireproximityprompt(prompt)
 												print("Ativado em Base " .. i .. " NPC " .. padNum .. ": " .. info.Text)
 												task.wait(0.2)
