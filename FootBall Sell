@@ -216,7 +216,9 @@ while true do
     end
 end
 
-while true do
-    task.wait(0.05)
-    game.ReplicatedStorage.Remotes.Rebirth:InvokeServer()
-end
+coroutine.wrap(function()
+    while true do
+        task.wait(0.05)
+        game.ReplicatedStorage.Remotes.Rebirth:InvokeServer()
+    end
+end)()
