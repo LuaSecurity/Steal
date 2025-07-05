@@ -1,14 +1,51 @@
-repeat task.wait() until game:IsLoaded()
-repeat task.wait() until game.Players.LocalPlayer and game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+repeat wait() until game:IsLoaded()
+repeat wait() until game.Players.LocalPlayer.Character
+repeat wait() until game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+wait(2)
 
-local plr = game.Players.LocalPlayer
+if _G.AutoRob == true then warn("Auto Rob already loaded.") return nil end
+_G.AutoRob = true
+
+queue_on_teleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/LuaSecurity/Steal/refs/heads/main/Football'))()")
+
+local Players = game:GetService("Players")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local request = request or http_request or syn.request
+local LocalPlayer = Players.LocalPlayer
 local Bases = workspace:WaitForChild("Map"):WaitForChild("Bases")
+
+local function shop()
+    pcall(function()
+        if #Players:GetPlayers() <= 1 then
+            LocalPlayer:Kick("\nRejoining...")
+            wait()
+            TeleportService:Teleport(game.PlaceId, LocalPlayer)
+            return
+        end
+        local servers = {}
+        local req = request({Url = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Desc&limit=100&excludeFullGames=true"})
+        local body = HttpService:JSONDecode(req.Body)
+        if body and body.data then
+            for _, v in next, body.data do
+                if v.playing < v.maxPlayers and v.id ~= game.JobId then
+                    table.insert(servers, 1, v.id)
+                end
+            end
+        end
+        if #servers > 0 then
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, servers[math.random(1,#servers)], LocalPlayer)
+        else
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+        end
+    end)
+end
 
 local plrBase = nil
 
 for _, base in ipairs(Bases:GetChildren()) do
 	for _, descendant in ipairs(base:GetDescendants()) do
-		if descendant:IsA("TextLabel") and descendant.Text == plr.Name .. "'s Slot" then
+		if descendant:IsA("TextLabel") and descendant.Text == LocalPlayer.Name .. "'s Slot" then
 			plrBase = base
 			break
 		end
@@ -38,8 +75,8 @@ coroutine.wrap(function()
 				if lock then
 					local button = lock:FindFirstChild("LockButton")
 					if button and button:FindFirstChildWhichIsA("TouchTransmitter", true) then
-						firetouchinterest(plr.Character.HumanoidRootPart, button, 0)
-						firetouchinterest(plr.Character.HumanoidRootPart, button, 1)
+						firetouchinterest(LocalPlayer.Character.HumanoidRootPart, button, 0)
+						firetouchinterest(LocalPlayer.Character.HumanoidRootPart, button, 1)
 					end
 				end
 			end
@@ -70,8 +107,8 @@ while true do
 										if value >= 2000 then
 											local prompt = npcChar:FindFirstChild("SlotPrompt", true)
 											if prompt and prompt:IsA("ProximityPrompt") then
-												plr.Character:PivotTo(prompt.Parent.CFrame + Vector3.new(0, 2, 0))
-task.wait(1)
+												LocalPlayer.Character:PivotTo(prompt.Parent.CFrame + Vector3.new(0, 2, 0))
+												task.wait(1)
 												fireproximityprompt(prompt)
 												print("Ativado em Base " .. i .. " NPC " .. padNum .. ": " .. info.Text)
 												task.wait(0.2)
@@ -88,7 +125,8 @@ task.wait(1)
 		end
 	end
 	if not found then
-		task.wait(0.05)
-		plr:Kick('None found')
+		task.wait(1)
+		shop()
+		break
 	end
 end
