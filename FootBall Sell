@@ -79,6 +79,14 @@ local function sellAllNPCs(base)
             if pad then
                 local npc = pad:FindFirstChild("Character")
                 if npc then
+                    local head = npc:FindFirstChild("Head")
+                    local overhead = head and head:FindFirstChild("OverHeadAttachment")
+                    local info = overhead and overhead:FindFirstChild("CharacterInfo")
+                    local frame = info and info:FindFirstChild("Frame")
+                    local unitName = frame and frame:FindFirstChild("UnitName")
+                    if unitName and unitName:IsA("TextLabel") and unitName.Text == "IShowSpeed" then
+                        continue
+                    end
                     local prompt = npc:FindFirstChild("SlotPrompt", true)
                     if prompt and prompt:IsA("ProximityPrompt") then
                         LocalPlayer.Character:PivotTo(prompt.Parent.CFrame + Vector3.new(0, 2, 0))
