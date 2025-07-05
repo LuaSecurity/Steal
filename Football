@@ -1,47 +1,51 @@
-repeat wait() until game:IsLoaded()
-repeat wait() until game.Players.LocalPlayer.Character.HumanoidRootpart
+repeat task.wait() until game:IsLoaded()
+repeat task.wait() until game.Players.LocalPlayer and game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
 queue_on_teleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/LuaSecurity/Steal/refs/heads/main/Football"))()')
+
 local plr = game.Players.LocalPlayer
 local Bases = workspace:WaitForChild("Map"):WaitForChild("Bases")
 
 function shop()
 	local a, b = pcall(function()
 		local servers = {}
-		local req = request({
-			Url = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100&excludeFullGames=true"
-		})
-		local body = game:GetService("HttpService"):JSONDecode(req.Body)
+		local cursor = ""
+		local found = false
 
-		if body and body.data then
-			for i, v in next, body.data do
-				if type(v) == "table" and tonumber(v.playing) and tonumber(v.maxPlayers) and v.playing < v.maxPlayers and v.id ~= game.JobId then
-					table.insert(servers, 1, v.id)
+		repeat
+			local req = request({
+				Url = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Desc&limit=100&excludeFullGames=true&cursor="..cursor
+			})
+			local body = game:GetService("HttpService"):JSONDecode(req.Body)
+			if body and body.data then
+				for _, v in next, body.data do
+					if type(v) == "table" and tonumber(v.playing) and tonumber(v.maxPlayers) and v.playing < v.maxPlayers and v.id ~= game.JobId then
+						table.insert(servers, v.id)
+					end
 				end
 			end
-		end
+			cursor = body.nextPageCursor or ""
+		until cursor == "" or #servers >= 5
 
-		print(#servers)
 		if #servers > 0 then
-			game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)], game.Players.LocalPlayer)
+			game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, servers[math.random(1, #servers)], plr)
 		else
 			if #game.Players:GetChildren() <= 1 then
-				game.Players.LocalPlayer:Kick("\nRejoining...")
-				wait()
-				game:GetService("TeleportService"):Teleport(game.PlaceId, game.Players.LocalPlayer)
+				plr:Kick("\nRejoining...")
+				task.wait()
+				game:GetService("TeleportService"):Teleport(game.PlaceId, plr)
 			else
-				game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, game.Players.LocalPlayer)
+				game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, game.JobId, plr)
 			end
 		end
 	end)
-
-	print(a, b)
 
 	if not a then
 		shop()
 	end
 
 	task.spawn(function()
-		while wait(5) do
+		while task.wait(5) do
 			shop()
 		end
 	end)
