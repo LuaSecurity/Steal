@@ -29,6 +29,16 @@ local function hasNPC(base, padNum)
 	return p and p:FindFirstChild("Character") ~= nil
 end
 
+local function isFull(base)
+	local filled = 0
+	for i = 1, 10 do
+		if hasNPC(base, i) then
+			filled += 1
+		end
+	end
+	return filled == 10
+end
+
 local function triggerPrompt(npcChar)
 	local prompt = npcChar:FindFirstChild("SlotPrompt", true)
 	if prompt and prompt:IsA("ProximityPrompt") then
@@ -89,22 +99,22 @@ while true do
 
 	if myBase then
 		myBase.Important.RobberyDeposit.Size = Vector3.new(2000,100,2000)
-		local pads = myBase.Important:FindFirstChild("NPCPads", true)
-		for pad = 1,10 do
-			local node = pads and pads:FindFirstChild(tostring(pad))
-			if node and node:FindFirstChild("Character") then
-				if triggerPrompt(node.Character) then
-					totalNPCs += 1
+		if isFull(myBase) then
+			local pads = myBase.Important:FindFirstChild("NPCPads", true)
+			for pad = 1, 10 do
+				local node = pads and pads:FindFirstChild(tostring(pad))
+				if node and node:FindFirstChild("Character") then
+					triggerPrompt(node.Character)
 				end
 			end
 		end
 	end
 
-	for i = 1,8 do
+	for i = 1, 8 do
 		local base = Bases:FindFirstChild(tostring(i))
 		if base and base ~= myBase then
 			local pads = base:FindFirstChild("Important", true):FindFirstChild("NPCPads", true)
-			for pad = 1,10 do
+			for pad = 1, 10 do
 				local node = pads and pads:FindFirstChild(tostring(pad))
 				if node and node:FindFirstChild("Character") then
 					if triggerPrompt(node.Character) then
