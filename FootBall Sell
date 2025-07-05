@@ -12,10 +12,10 @@ local LocalPlayer = Players.LocalPlayer
 local Bases = workspace:WaitForChild("Map"):WaitForChild("Bases")
 
 local function hasNPC(base, padNum)
-	local ip = base:FindFirstChild("Important", true)
-	local per = ip and ip:FindFirstChild("NPCPads", true)
-	local p = per and per:FindFirstChild(tostring(padNum))
-	return p and p:FindFirstChild("Character") ~= nil
+	local imp = base:FindFirstChild("Important", true)
+	local pads = imp and imp:FindFirstChild("NPCPads", true)
+	local pad = pads and pads:FindFirstChild(tostring(padNum))
+	return pad and pad:FindFirstChild("Character")
 end
 
 local function isFull(base)
@@ -25,16 +25,16 @@ local function isFull(base)
 	return true
 end
 
-local function triggerPrompt(npcChar)
-	local prompt = npcChar:FindFirstChild("SlotPrompt", true)
+local function triggerUntilGone(npc)
+	local prompt = npc:FindFirstChild("SlotPrompt", true)
 	if prompt and prompt:IsA("ProximityPrompt") then
-		LocalPlayer.Character:PivotTo(prompt.Parent.CFrame + Vector3.new(0, 2, 0))
-		task.wait(0.05)
-		fireproximityprompt(prompt)
-		task.wait(0.3)
-		return true
+		while npc.Parent do
+			LocalPlayer.Character:PivotTo(prompt.Parent.CFrame + Vector3.new(0, 2, 0))
+			task.wait(0.05)
+			fireproximityprompt(prompt)
+			task.wait(0.3)
+		end
 	end
-	return false
 end
 
 local function getMyBase()
@@ -49,18 +49,19 @@ local function getMyBase()
 end
 
 while true do
-	local found = false
 	local myBase = getMyBase()
 
 	if myBase then
 		myBase.Important.RobberyDeposit.Size = Vector3.new(2000,100,2000)
 		if isFull(myBase) then
 			local pads = myBase.Important:FindFirstChild("NPCPads", true)
-			for pad = 1, 10 do
-				local node = pads and pads:FindFirstChild(tostring(pad))
-				if node and node:FindFirstChild("Character") then
-					triggerPrompt(node.Character)
-					found = true
+			for i = 1, 10 do
+				local node = pads and pads:FindFirstChild(tostring(i))
+				if node then
+					local char = node:FindFirstChild("Character")
+					if char then
+						triggerUntilGone(char)
+					end
 				end
 			end
 		end
@@ -72,9 +73,11 @@ while true do
 			local pads = base:FindFirstChild("Important", true):FindFirstChild("NPCPads", true)
 			for pad = 1, 10 do
 				local node = pads and pads:FindFirstChild(tostring(pad))
-				if node and node:FindFirstChild("Character") then
-					triggerPrompt(node.Character)
-					found = true
+				if node then
+					local char = node:FindFirstChild("Character")
+					if char then
+						triggerUntilGone(char)
+					end
 				end
 			end
 		end
