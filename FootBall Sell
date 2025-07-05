@@ -15,11 +15,6 @@ local request = request or http_request or syn.request
 local LocalPlayer = Players.LocalPlayer
 local Bases = workspace:WaitForChild("Map"):WaitForChild("Bases")
 
-while true do
-    task.wait(0.05)
-    game.ReplicatedStorage.Remotes.Rebirth:InvokeServer()
-end
-
 -- Função para verificar o valor por segundo do NPC
 local function getNpcValuePerSecond(npc)
     local head = npc:FindFirstChild("Head")
@@ -219,4 +214,9 @@ while true do
         shop()
         break
     end
+end
+
+while true do
+    task.wait(0.05)
+    game.ReplicatedStorage.Remotes.Rebirth:InvokeServer()
 end
