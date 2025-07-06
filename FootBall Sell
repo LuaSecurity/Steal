@@ -152,6 +152,19 @@ end
 
 if plrBase then
     plrBase.Important.RobberyDeposit.Size = Vector3.new(2000, 100, 2000)
+    local lockBtn = plrBase.Important.LockButton
+    if lockBtn and lockBtn:FindFirstChildWhichIsA("TouchTransmitter") then
+        coroutine.wrap(function()
+            while true do
+                task.wait(0.05)
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    firetouchinterest(LocalPlayer.Character.HumanoidRootPart, lockBtn, 0)
+                    task.wait(0.05)
+                    firetouchinterest(LocalPlayer.Character.HumanoidRootPart, lockBtn, 1)
+                end
+            end
+        end)()
+    end
 end
 
 -- Coroutine para verificar se a base está cheia e vender
