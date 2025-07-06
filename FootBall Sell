@@ -1,4 +1,5 @@
 repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+task.wait(2)
 
 queue_on_teleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/LuaSecurity/Steal/main/FootBall%20Sell'))()")
 
@@ -14,128 +15,144 @@ local Bases = workspace:WaitForChild("Map"):WaitForChild("Bases")
 
 local plrBase
 for _, b in ipairs(Bases:GetChildren()) do
-    if b:FindFirstChild("Important", true):FindFirstChild("Slot")?.Text == LocalPlayer.Name.."'s Slot" then
-        plrBase = b
-        plrBase.Important.RobberyDeposit.Size = Vector3.new(2000,100,2000)
-        local lock = b:FindFirstChild("Important", true):FindFirstChild("LockButton")
-        if lock and lock:FindFirstChildWhichIsA("TouchTransmitter", true) then
-            firetouchinterest(LocalPlayer.Character.HumanoidRootPart, lock, 0)
-            firetouchinterest(LocalPlayer.Character.HumanoidRootPart, lock, 1)
-        end
-        break
-    end
+	local slot = b:FindFirstChild("Important", true):FindFirstChild("Slot")
+	if slot and slot:IsA("TextLabel") and slot.Text == LocalPlayer.Name.."'s Slot" then
+		plrBase = b
+		plrBase.Important.RobberyDeposit.Size = Vector3.new(2000, 100, 2000)
+		local lock = b:FindFirstChild("Important", true):FindFirstChild("LockButton")
+		if lock and lock:FindFirstChildWhichIsA("TouchTransmitter", true) then
+			firetouchinterest(LocalPlayer.Character.HumanoidRootPart, lock, 0)
+			firetouchinterest(LocalPlayer.Character.HumanoidRootPart, lock, 1)
+		end
+		break
+	end
 end
 
 coroutine.wrap(function()
-    while true do
-        task.wait(0.05)
-        game.ReplicatedStorage.Remotes.Rebirth:InvokeServer()
-    end
+	while true do
+		task.wait(0.05)
+		game.ReplicatedStorage.Remotes.Rebirth:InvokeServer()
+	end
 end)()
 
 local function parseValue(str)
-    local num = tonumber(str:match("[%.%d]+")) or 0
-    if str:find("K") then num *= 1000 end
-    return num
+	local num = tonumber(str:match("[%.%d]+")) or 0
+	if str:find("K") then num *= 1000 end
+	return num
 end
 
 local function getValuePerSec(npc)
-    local label = npc:FindFirstChild("Head") and npc.Head:FindFirstChild("OverHeadAttachment")
-        and npc.Head.OverHeadAttachment:FindFirstChild("CharacterInfo")
-        and npc.Head.OverHeadAttachment.CharacterInfo:FindFirstChild("Frame")
-        and npc.Head.OverHeadAttachment.CharacterInfo.Frame:FindFirstChild("PerSecond")
-    return (label and label:IsA("TextLabel")) and parseValue(label.Text) or 0
+	local head = npc:FindFirstChild("Head")
+	if not head then return 0 end
+	local overhead = head:FindFirstChild("OverHeadAttachment")
+	if not overhead then return 0 end
+	local info = overhead:FindFirstChild("CharacterInfo")
+	if not info then return 0 end
+	local frame = info:FindFirstChild("Frame")
+	if not frame then return 0 end
+	local perSec = frame:FindFirstChild("PerSecond")
+	if not perSec or not perSec:IsA("TextLabel") then return 0 end
+	return parseValue(perSec.Text)
 end
 
 local function hasNPCs(base)
-    for i = 1,10 do
-        if base:FindFirstChild("Important", true):FindFirstChild("NPCPads", true)
-           :FindFirstChild(tostring(i))?.Character then
-            return true
-        end
-    end
-    return false
+	local pads = base:FindFirstChild("Important", true):FindFirstChild("NPCPads", true)
+	if not pads then return false end
+	for i = 1, 10 do
+		local pad = pads:FindFirstChild(tostring(i))
+		if pad and pad:FindFirstChild("Character") then
+			return true
+		end
+	end
+	return false
 end
 
 local function sellNPCs(base)
-    local pads = base:FindFirstChild("Important", true):FindFirstChild("NPCPads", true)
-    if not pads then return end
-    while true do
-        local sold = false
-        for _, pad in ipairs(pads:GetChildren()) do
-            local npc = pad:FindFirstChild("Character")
-            if npc then
-                local nameLab = npc:FindFirstChild("Head")
-                    and npc.Head:FindFirstChild("OverHeadAttachment")
-                    and npc.Head.OverHeadAttachment.CharacterInfo.Frame:FindFirstChild("UnitName")
-                if not (nameLab and nameLab:IsA("TextLabel") and nameLab.Text == "IShowSpeed") then
-                    local prompt = npc:FindFirstChild("SlotPrompt", true)
-                    if prompt and prompt:IsA("ProximityPrompt") then
-                        LocalPlayer.Character:PivotTo(prompt.Parent.CFrame + Vector3.new(0,2,0))
-                        task.wait(0.1)
-                        fireproximityprompt(prompt)
-                        sold = true
-                        task.wait(0.2)
-                    end
-                end
-            end
-        end
-        if not sold or not hasNPCs(base) then break end
-    end
+	local pads = base:FindFirstChild("Important", true):FindFirstChild("NPCPads", true)
+	if not pads then return end
+	while true do
+		local sold = false
+		for _, pad in ipairs(pads:GetChildren()) do
+			local npc = pad:FindFirstChild("Character")
+			if npc then
+				local nameLbl = npc:FindFirstChild("Head") and npc.Head:FindFirstChild("OverHeadAttachment")
+				if nameLbl and nameLbl:FindFirstChild("CharacterInfo") and nameLbl.CharacterInfo:FindFirstChild("Frame") then
+					local unitName = nameLbl.CharacterInfo.Frame:FindFirstChild("UnitName")
+					if unitName and unitName:IsA("TextLabel") and unitName.Text == "IShowSpeed" then
+						continue
+					end
+				end
+				local prompt = npc:FindFirstChild("SlotPrompt", true)
+				if prompt and prompt:IsA("ProximityPrompt") then
+					LocalPlayer.Character:PivotTo(prompt.Parent.CFrame + Vector3.new(0,2,0))
+					task.wait(0.1)
+					fireproximityprompt(prompt)
+					sold = true
+					task.wait(0.2)
+				end
+			end
+		end
+		if not sold or not hasNPCs(base) then break end
+	end
 end
 
 local function teleportToOtherServer()
-    if #Players:GetPlayers() <= 1 then
-        LocalPlayer:Kick("\nRejoining...")
-        TeleportService:Teleport(game.PlaceId, LocalPlayer)
-        return
-    end
-    local servers, cursor = {}, ""
-    repeat
-        local res = request({Url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Desc&limit=100&excludeFullGames=true%s")
-            :format(game.PlaceId, cursor ~= "" and "&cursor="..cursor or "")})
-        local body = HttpService:JSONDecode(res.Body)
-        if body and body.data then
-            for _, v in ipairs(body.data) do
-                if v.playing < v.maxPlayers and v.id ~= game.JobId then
-                    table.insert(servers, v.id)
-                end
-            end
-            cursor = body.nextPageCursor or ""
-        else break end
-    until cursor == ""
-    local choice = servers[math.random(#servers)]
-    TeleportService:TeleportToPlaceInstance(game.PlaceId, choice or game.JobId, LocalPlayer)
+	if #Players:GetPlayers() <= 1 then
+		LocalPlayer:Kick("\nRejoining...")
+		TeleportService:Teleport(game.PlaceId, LocalPlayer)
+		return
+	end
+	local servers, cursor = {}, ""
+	repeat
+		local res = request({
+			Url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Desc&limit=100&excludeFullGames=true%s")
+			:format(game.PlaceId, cursor ~= "" and "&cursor="..cursor or "")
+		})
+		local body = HttpService:JSONDecode(res.Body)
+		if body and body.data then
+			for _, v in ipairs(body.data) do
+				if v.playing < v.maxPlayers and v.id ~= game.JobId then
+					table.insert(servers, v.id)
+				end
+			end
+			cursor = body.nextPageCursor or ""
+		else break end
+	until cursor == ""
+	local choice = servers[math.random(#servers)]
+	TeleportService:TeleportToPlaceInstance(game.PlaceId, choice or game.JobId, LocalPlayer)
 end
 
 coroutine.wrap(function()
-    while true do
-        local collected = false
-        for _, base in ipairs(Bases:GetChildren()) do
-            if base ~= plrBase then
-                for i = 1,10 do
-                    local pad = base:FindFirstChild("Important", true):FindFirstChild("NPCPads", true):FindFirstChild(tostring(i))
-                    local npc = pad and pad:FindFirstChild("Character")
-                    if npc and getValuePerSec(npc) > 5 then
-                        local prompt = npc:FindFirstChild("SlotPrompt", true)
-                        if prompt then
-                            LocalPlayer.Character:PivotTo(prompt.Parent.CFrame + Vector3.new(0,2,0))
-                            task.wait(0.1)
-                            fireproximityprompt(prompt)
-                            task.wait(0.2)
-                            collected = true
-                        end
-                    end
-                end
-            end
-        end
-        if plrBase and hasNPCs(plrBase) then
-            sellNPCs(plrBase)
-        end
-        if not collected then
-            task.wait(0.5)
-            teleportToOtherServer()
-            break
-        end
-    end
+	while true do
+		local collected = false
+		for _, base in ipairs(Bases:GetChildren()) do
+			if base ~= plrBase then
+				local pads = base:FindFirstChild("Important", true):FindFirstChild("NPCPads", true)
+				if pads then
+					for i = 1,10 do
+						local pad = pads:FindFirstChild(tostring(i))
+						local npc = pad and pad:FindFirstChild("Character")
+						if npc and getValuePerSec(npc) > 5 then
+							local prompt = npc:FindFirstChild("SlotPrompt", true)
+							if prompt then
+								LocalPlayer.Character:PivotTo(prompt.Parent.CFrame + Vector3.new(0,2,0))
+								task.wait(0.1)
+								fireproximityprompt(prompt)
+								task.wait(0.2)
+								collected = true
+							end
+						end
+					end
+				end
+			end
+		end
+		if plrBase and hasNPCs(plrBase) then
+			sellNPCs(plrBase)
+		end
+		if not collected then
+			task.wait(0.5)
+			teleportToOtherServer()
+			break
+		end
+	end
 end)()
