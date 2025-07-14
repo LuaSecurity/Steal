@@ -48,7 +48,7 @@ local function serverHop()
 	if #servers > 0 then
 		local selected = servers[math.random(1, #servers)]
 		visitedServers[selected] = true
-		queueonteleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/LuaSecurity/Steal/refs/heads/main/stealArealCar'))()")
+		queueonteleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/LuaSecurity/Steal/refs/heads/main/StealARealCarSell'))()")
 		TeleportService:TeleportToPlaceInstance(PLACE_ID, selected, LocalPlayer)
 	end
 end
