@@ -1,0 +1,165 @@
+repeat wait() until game.Players.LocalPlayer
+repeat wait() until game.Players.LocalPlayer.Character
+repeat wait() until game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+repeat wait() until game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+repeat wait() until game.Players.LocalPlayer:FindFirstChild("Backpack")
+repeat wait() until game:IsLoaded()
+repeat wait() until workspace:FindFirstChild("Bases")
+wait(2)
+
+local Players = game:GetService("Players")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local Workspace = game:GetService("Workspace")
+
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+
+local PLACE_ID = game.PlaceId
+local visitedServers = { [game.JobId] = true }
+
+local function waitForServerChange(currentJobId)
+	repeat task.wait(1) until game.JobId ~= currentJobId
+end
+
+local function serverHop()
+	local currentJobId = game.JobId
+	local req = syn and syn.request or http and http.request or http_request or request
+	if not req then
+		warn("Nenhuma função de requisição HTTP encontrada.")
+		return
+	end
+
+	local function getServers()
+		local serverList = {}
+		local cursor = nil
+
+		repeat
+			local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(PLACE_ID)
+			if cursor then url = url .. "&cursor=" .. cursor end
+
+			local response = req({ Url = url })
+			if response and response.StatusCode == 200 then
+				local data = HttpService:JSONDecode(response.Body)
+				for _, server in ipairs(data.data) do
+					if server.playing < server.maxPlayers and not visitedServers[server.id] and server.id ~= currentJobId then
+						table.insert(serverList, server.id)
+					end
+				end
+				cursor = data.nextPageCursor
+			else
+				break
+			end
+		until not cursor or #serverList >= 5
+
+		return serverList
+	end
+
+	while true do
+		local foundServers = getServers()
+		if #foundServers > 0 then
+			local selectedServer = foundServers[math.random(1, #foundServers)]
+			visitedServers[selectedServer] = true
+
+			queueonteleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/LuaSecurity/Steal/refs/heads/main/StealARealCarSell'))()")
+			TeleportService:TeleportToPlaceInstance(PLACE_ID, selectedServer, LocalPlayer)
+			waitForServerChange(currentJobId)
+			break
+		else
+			warn("Nenhum servidor válido encontrado. Tentando novamente em 5 segundos...")
+			task.wait(5)
+		end
+	end
+end
+
+local MyBase = nil
+repeat
+	local Bases = Workspace:FindFirstChild("Bases")
+	if Bases then
+		for _, base in ipairs(Bases:GetChildren()) do
+			local label = base:FindFirstChild("Title")
+				and base.Title:FindFirstChild("NameGui")
+				and base.Title.NameGui:FindFirstChild("TextLabel")
+
+			if label and label.Text == LocalPlayer.Name then
+				MyBase = base
+				break
+			end
+		end
+	end
+	wait(1)
+until MyBase
+
+if MyBase:FindFirstChild("BuyHitbox") then
+	MyBase.BuyHitbox.Size = Vector3.new(2000, 2000, 2000)
+end
+
+for _, base in ipairs(Workspace.Bases:GetChildren()) do
+	if base ~= MyBase then
+		for _, part in ipairs(base:GetDescendants()) do
+			if part:IsA("BasePart") and (part.Name == "Wall" or part.Name == "Beam") then
+				part:Destroy()
+			end
+		end
+	end
+end
+
+task.spawn(function()
+	while true do
+		local hitbox = MyBase:FindFirstChild("LockBasePurchase") and MyBase.LockBasePurchase:FindFirstChild("Hitbox")
+		if hitbox and HumanoidRootPart then
+			firetouchinterest(hitbox, HumanoidRootPart, 0)
+			task.wait(0.05)
+			firetouchinterest(hitbox, HumanoidRootPart, 1)
+		end
+		task.wait(0.1)
+	end
+end)
+
+local function parsePrice(text)
+	if not text then return 0 end
+	local cleaned = text:gsub("[^%d]", "")
+	return tonumber(cleaned) or 0
+end
+
+local MIN_PRICE = 20000000000
+
+task.spawn(function()
+	while true do
+		local foundValid = false
+
+		for _, base in ipairs(Workspace.Bases:GetChildren()) do
+			if base ~= MyBase then
+				for _, descendant in ipairs(base:GetDescendants()) do
+					if descendant:IsA("ProximityPrompt") and descendant.Name == "SnatchPrompt" then
+						local promptParent = descendant.Parent
+						if promptParent then
+							for _, obj in ipairs(promptParent:GetDescendants()) do
+								if obj:IsA("TextLabel") and obj.Name == "Cost" then
+									local price = parsePrice(obj.Text)
+									if price and price >= MIN_PRICE then
+										HumanoidRootPart.CFrame = promptParent.CFrame + Vector3.new(0, 3, 0)
+										task.wait(0.2)
+										fireproximityprompt(descendant)
+										foundValid = true
+										break
+									end
+								end
+							end
+						end
+					end
+					if foundValid then break end
+				end
+			end
+			if foundValid then break end
+		end
+
+		if not foundValid then
+			serverHop()
+			break
+		end
+
+		task.wait(0.3)
+	end
+end)
