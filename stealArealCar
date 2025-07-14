@@ -8,7 +8,9 @@ local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
-
+for i = 1, 100 do
+print('works')
+end
 -- Game info
 local PLACE_ID = game.PlaceId
 local visitedServers = { [game.JobId] = true }
