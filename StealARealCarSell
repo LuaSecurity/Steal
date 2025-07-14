@@ -1,3 +1,4 @@
+--a
 repeat task.wait() until game.Players.LocalPlayer
 repeat task.wait() until game.Players.LocalPlayer.Character
 repeat task.wait() until game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
@@ -9,7 +10,6 @@ wait(2)
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
@@ -96,18 +96,22 @@ task.spawn(function()
 
 			if partsCount == 10 then
 				selling = true
-				for _, obj in ipairs(slots:GetDescendants()) do
-					if obj:IsA("ProximityPrompt") and obj.Name == "SellPrompt" then
-						local parent = obj.Parent
-						if parent and parent:IsA("BasePart") then
-							HumanoidRootPart.CFrame = parent.CFrame + Vector3.new(0, 3, 0)
-							task.wait(0.2)
-							fireproximityprompt(obj, 1)
-							task.wait(0.2)
+				for _, folder in ipairs(slots:GetChildren()) do
+					if folder:IsA("Folder") and folder.Name == "Parts" then
+						for _, obj in ipairs(folder:GetDescendants()) do
+							if obj:IsA("ProximityPrompt") and obj.Name == "SellPrompt" then
+								local parent = obj.Parent
+								if parent and parent:IsA("BasePart") then
+									HumanoidRootPart.CFrame = parent.CFrame + Vector3.new(0, 3, 0)
+									task.wait(0.2)
+									fireproximityprompt(obj, 1)
+									task.wait(0.5)
+								end
+							end
 						end
 					end
 				end
-				task.wait(3)
+				task.wait(2)
 				selling = false
 			end
 		end
