@@ -1,4 +1,5 @@
 -- Services
+repeat wait() until game.Players.LocalPlayer.Character.Humanoid
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
