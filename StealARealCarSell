@@ -62,7 +62,7 @@ local function serverHop()
 			local selectedServer = foundServers[math.random(1, #foundServers)]
 			visitedServers[selectedServer] = true
 
-			queueonteleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/LuaSecurity/Steal/refs/heads/main/StealARealCarSell'))()")
+			queueonteleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/LuaSecurity/Steal/refs/heads/main/stealArealCar'))()")
 			TeleportService:TeleportToPlaceInstance(PLACE_ID, selectedServer, LocalPlayer)
 			waitForServerChange(currentJobId)
 			break
@@ -128,8 +128,8 @@ task.spawn(function()
 						local parent = descendant.Parent
 						if parent and parent:IsA("BasePart") then
 							HumanoidRootPart.CFrame = parent.CFrame + Vector3.new(0, 3, 0)
-							task.wait(0.2)
-							fireproximityprompt(descendant)
+							task.wait(0.3)
+							fireproximityprompt(descendant, 1)
 							foundValid = true
 							break
 						end
@@ -167,7 +167,7 @@ task.spawn(function()
 						if parent and parent:IsA("BasePart") then
 							HumanoidRootPart.CFrame = parent.CFrame + Vector3.new(0, 3, 0)
 							task.wait(0.2)
-							fireproximityprompt(obj)
+							fireproximityprompt(obj, 1)
 							task.wait(0.2)
 						end
 					end
