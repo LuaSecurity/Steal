@@ -15,16 +15,16 @@ local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
-
 local PLACE_ID = game.PlaceId
 local visitedServers = { [game.JobId] = true }
+local selling = false
 
 local function serverHop()
 	local req = syn and syn.request or http and http.request or http_request or request
 	if not req then return end
 
 	local function getServers()
-		local serverList, cursor = {}, nil
+		local list, cursor = {}, nil
 		repeat
 			local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(PLACE_ID)
 			if cursor then url = url .. "&cursor=" .. cursor end
@@ -33,15 +33,15 @@ local function serverHop()
 				local data = HttpService:JSONDecode(response.Body)
 				for _, server in ipairs(data.data) do
 					if server.playing < server.maxPlayers and not visitedServers[server.id] and server.id ~= game.JobId then
-						table.insert(serverList, server.id)
+						table.insert(list, server.id)
 					end
 				end
 				cursor = data.nextPageCursor
 			else
 				break
 			end
-		until not cursor or #serverList >= 5
-		return serverList
+		until not cursor or #list >= 5
+		return list
 	end
 
 	local servers = getServers()
@@ -53,7 +53,7 @@ local function serverHop()
 	end
 end
 
-local MyBase = nil
+local MyBase
 repeat
 	local Bases = Workspace:FindFirstChild("Bases")
 	if Bases then
@@ -67,7 +67,7 @@ repeat
 			end
 		end
 	end
-	task.wait(1)
+	wait(1)
 until MyBase
 
 if MyBase:FindFirstChild("BuyHitbox") then
@@ -87,7 +87,7 @@ end
 task.spawn(function()
 	while true do
 		local hitbox = MyBase:FindFirstChild("LockBasePurchase") and MyBase.LockBasePurchase:FindFirstChild("Hitbox")
-		if hitbox and HumanoidRootPart then
+		if hitbox then
 			firetouchinterest(hitbox, HumanoidRootPart, 0)
 			task.wait(0.05)
 			firetouchinterest(hitbox, HumanoidRootPart, 1)
@@ -96,37 +96,34 @@ task.spawn(function()
 	end
 end)
 
-local selling = false
-
+-- CONSTANTLY CHECK FOR EXACTLY 10 "Parts" folders AND SELL
 task.spawn(function()
 	while true do
 		local slots = MyBase:FindFirstChild("Slots")
 		if slots then
-			local partsCount = 0
+			local folders = {}
 			for _, folder in ipairs(slots:GetChildren()) do
 				if folder:IsA("Folder") and folder.Name == "Parts" then
-					partsCount += 1
+					table.insert(folders, folder)
 				end
 			end
 
-			if partsCount == 10 then
+			if #folders == 10 then
 				selling = true
-				for _, folder in ipairs(slots:GetChildren()) do
-					if folder:IsA("Folder") and folder.Name == "Parts" then
-						for _, obj in ipairs(folder:GetDescendants()) do
-							if obj:IsA("ProximityPrompt") and obj.Name == "SellPrompt" then
-								local parent = obj.Parent
-								if parent and parent:IsA("BasePart") then
-									HumanoidRootPart.CFrame = parent.CFrame + Vector3.new(0, 3, 0)
-									task.wait(0.2)
-									fireproximityprompt(obj, 1)
-									task.wait(0.5)
-								end
+				for _, folder in ipairs(folders) do
+					for _, obj in ipairs(folder:GetDescendants()) do
+						if obj:IsA("ProximityPrompt") and obj.Name == "SellPrompt" then
+							local parent = obj.Parent
+							if parent and parent:IsA("BasePart") then
+								HumanoidRootPart.CFrame = parent.CFrame + Vector3.new(0, 3, 0)
+								task.wait(0.3)
+								fireproximityprompt(obj, 1)
+								task.wait(0.3)
 							end
 						end
 					end
 				end
-				task.wait(2)
+				task.wait(3)
 				selling = false
 			end
 		end
@@ -134,10 +131,12 @@ task.spawn(function()
 	end
 end)
 
+-- STEAL CARS ONLY IF NOT SELLING
 task.spawn(function()
 	while true do
 		if selling then task.wait(1) continue end
 		local found = false
+
 		for _, base in ipairs(Workspace.Bases:GetChildren()) do
 			if base ~= MyBase then
 				for _, descendant in ipairs(base:GetDescendants()) do
@@ -155,10 +154,12 @@ task.spawn(function()
 			end
 			if found then break end
 		end
+
 		if not found then
 			serverHop()
 			break
 		end
+
 		task.wait(0.3)
 	end
 end)
