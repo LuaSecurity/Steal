@@ -117,14 +117,6 @@ task.spawn(function()
 	end
 end)
 
-local function parsePrice(text)
-	if not text then return 0 end
-	local cleaned = text:gsub("[^%d]", "")
-	return tonumber(cleaned) or 0
-end
-
-local MIN_PRICE = 0
-
 task.spawn(function()
 	while true do
 		local foundValid = false
@@ -135,18 +127,11 @@ task.spawn(function()
 					if descendant:IsA("ProximityPrompt") and descendant.Name == "SnatchPrompt" then
 						local promptParent = descendant.Parent
 						if promptParent then
-							for _, obj in ipairs(promptParent:GetDescendants()) do
-								if obj:IsA("TextLabel") and obj.Name == "Cost" then
-									local price = parsePrice(obj.Text)
-									if price and price >= MIN_PRICE then
-										HumanoidRootPart.CFrame = promptParent.CFrame + Vector3.new(0, 3, 0)
-										task.wait(0.2)
-										fireproximityprompt(descendant)
-										foundValid = true
-										break
-									end
-								end
-							end
+							HumanoidRootPart.CFrame = promptParent.CFrame + Vector3.new(0, 3, 0)
+							task.wait(0.2)
+							fireproximityprompt(descendant)
+							foundValid = true
+							break
 						end
 					end
 					if foundValid then break end
@@ -161,5 +146,34 @@ task.spawn(function()
 		end
 
 		task.wait(0.3)
+	end
+end)
+
+task.spawn(function()
+	while true do
+		local slots = MyBase:FindFirstChild("Slots")
+		if slots then
+			local partsCount = 0
+			for _, folder in ipairs(slots:GetChildren()) do
+				if folder:IsA("Folder") and folder.Name == "Parts" then
+					partsCount += 1
+				end
+			end
+
+			if partsCount >= 10 then
+				for _, obj in ipairs(slots:GetDescendants()) do
+					if obj:IsA("ProximityPrompt") and obj.Name == "SellPrompt" then
+						local parent = obj.Parent
+						if parent and parent:IsA("BasePart") then
+							HumanoidRootPart.CFrame = parent.CFrame + Vector3.new(0, 3, 0)
+							task.wait(0.2)
+							fireproximityprompt(obj)
+							task.wait(0.2)
+						end
+					end
+				end
+			end
+		end
+		task.wait(1)
 	end
 end)
