@@ -1,18 +1,26 @@
+-- Services
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
+local Workspace = game:GetService("Workspace")
+
+-- Player setup
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 
+-- Game info
 local PLACE_ID = game.PlaceId
-local visitedServers = { [game.JobId] = true } -- Store the current server to avoid revisiting
-queueonteleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/LuaSecurity/Steal/refs/heads/main/stealArealCar"))()')
--- Server hop function
+local visitedServers = { [game.JobId] = true }
+
+-- Server hopping
 local function serverHop()
 	local servers = {}
 	local req = syn and syn.request or http and http.request or http_request or request
-	if not req then return end
+	if not req then
+		warn("No HTTP request function available.")
+		return
+	end
 
 	local cursor = nil
 	repeat
@@ -38,6 +46,99 @@ local function serverHop()
 	if #servers > 0 then
 		local selectedServer = servers[math.random(1, #servers)]
 		visitedServers[selectedServer] = true
+
+		-- ✅ Queue script for next server
+		queueonteleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/LuaSecurity/Steal/refs/heads/main/stealArealCar'))()")
+
 		TeleportService:TeleportToPlaceInstance(PLACE_ID, selectedServer, LocalPlayer)
+	else
+		warn("No new servers found to hop to.")
 	end
 end
+
+-- Locate player base
+local Bases = Workspace:WaitForChild("Bases"):GetChildren()
+local MyBase = nil
+
+for _, base in ipairs(Bases) do
+	local label = base:FindFirstChild("Title")
+		and base.Title:FindFirstChild("NameGui")
+		and base.Title.NameGui:FindFirstChild("TextLabel")
+
+	if label and label.Text == LocalPlayer.Name then
+		MyBase = base
+		break
+	end
+end
+
+if not MyBase then
+	warn("Player base not found.")
+	return
+end
+
+-- Increase your base hitbox
+if MyBase:FindFirstChild("BuyHitbox") then
+	MyBase.BuyHitbox.Size = Vector3.new(2000, 2000, 2000)
+end
+
+-- Remove walls from other bases
+for _, base in ipairs(Bases) do
+	if base ~= MyBase then
+		for _, part in ipairs(base:GetDescendants()) do
+			if part:IsA("BasePart") and (part.Name == "Wall" or part.Name == "Beam") then
+				part:Destroy()
+			end
+		end
+	end
+end
+
+-- Activate touch on your base repeatedly
+task.spawn(function()
+	while true do
+		local hitbox = MyBase:FindFirstChild("LockBasePurchase")
+			and MyBase.LockBasePurchase:FindFirstChild("Hitbox")
+		if hitbox and HumanoidRootPart then
+			firetouchinterest(hitbox, HumanoidRootPart, 0)
+			task.wait(0.05)
+			firetouchinterest(hitbox, HumanoidRootPart, 1)
+		end
+		task.wait(0.1)
+	end
+end)
+
+-- Loop to find and snatch valid targets, or hop servers
+task.spawn(function()
+	while true do
+		local foundValid = false
+
+		for _, base in ipairs(Bases) do
+			if base ~= MyBase then
+				for _, descendant in ipairs(base:GetDescendants()) do
+					if descendant:IsA("ProximityPrompt") and descendant.Name == "SnatchPrompt" then
+						local promptParent = descendant.Parent
+						if promptParent then
+							for _, obj in ipairs(promptParent:GetDescendants()) do
+								if obj:IsA("TextLabel") and obj.Name == "Cost" and obj.Text == "$20,000,000,000" then
+									HumanoidRootPart.CFrame = promptParent.CFrame + Vector3.new(0, 3, 0)
+									task.wait(0.2)
+									fireproximityprompt(descendant)
+									foundValid = true
+									break
+								end
+							end
+						end
+					end
+					if foundValid then break end
+				end
+			end
+			if foundValid then break end
+		end
+
+		if not foundValid then
+			serverHop()
+			break -- stop loop after hopping
+		end
+
+		task.wait(0.3)
+	end
+end)
