@@ -1,4 +1,3 @@
--- Wait for essential services and objects to load
 repeat task.wait() until game.Players.LocalPlayer
 repeat task.wait() until game.Players.LocalPlayer.Character
 repeat task.wait() until game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
@@ -9,73 +8,14 @@ repeat task.wait() until workspace:FindFirstChild("Bases")
 wait(2)
 
 local Players = game:GetService("Players")
-local TeleportService = game:GetService("TeleportService")
-local HttpService = game:GetService("HttpService")
 local Workspace = game:GetService("Workspace")
+local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 
-local PLACE_ID = game.PlaceId
-local visitedServers = { [game.JobId] = true }
-
-local function waitForServerChange(currentJobId)
-	repeat task.wait(1) until game.JobId ~= currentJobId
-end
-
-local function serverHop()
-	local currentJobId = game.JobId
-	local req = syn and syn.request or http and http.request or http_request or request
-	if not req then
-		warn("Nenhuma função de requisição HTTP encontrada.")
-		return
-	end
-
-	local function getServers()
-		local serverList = {}
-		local cursor = nil
-
-		repeat
-			local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(PLACE_ID)
-			if cursor then url = url .. "&cursor=" .. cursor end
-
-			local response = req({ Url = url })
-			if response and response.StatusCode == 200 then
-				local data = HttpService:JSONDecode(response.Body)
-				for _, server in ipairs(data.data) do
-					if server.playing < server.maxPlayers and not visitedServers[server.id] and server.id ~= currentJobId then
-						table.insert(serverList, server.id)
-					end
-				end
-				cursor = data.nextPageCursor
-			else
-				break
-			end
-		until not cursor or #serverList >= 5
-
-		return serverList
-	end
-
-	while true do
-		local foundServers = getServers()
-		if #foundServers > 0 then
-			local selectedServer = foundServers[math.random(1, #foundServers)]
-			visitedServers[selectedServer] = true
-
-			queueonteleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/LuaSecurity/Steal/refs/heads/main/stealArealCar'))()")
-			TeleportService:TeleportToPlaceInstance(PLACE_ID, selectedServer, LocalPlayer)
-			waitForServerChange(currentJobId)
-			break
-		else
-			warn("Nenhum servidor válido encontrado. Tentando novamente em 5 segundos...")
-			task.wait(5)
-		end
-	end
-end
-
--- Find player's base
-local MyBase
+local MyBase = nil
 repeat
 	local Bases = Workspace:FindFirstChild("Bases")
 	if Bases then
@@ -93,12 +33,10 @@ repeat
 	task.wait(1)
 until MyBase
 
--- Enlarge hitbox if available
 if MyBase:FindFirstChild("BuyHitbox") then
 	MyBase.BuyHitbox.Size = Vector3.new(2000, 2000, 2000)
 end
 
--- Destroy walls/beams of other bases
 for _, base in ipairs(Workspace.Bases:GetChildren()) do
 	if base ~= MyBase then
 		for _, part in ipairs(base:GetDescendants()) do
@@ -109,7 +47,6 @@ for _, base in ipairs(Workspace.Bases:GetChildren()) do
 	end
 end
 
--- Auto-touch purchase hitbox
 task.spawn(function()
 	while true do
 		local hitbox = MyBase:FindFirstChild("LockBasePurchase") and MyBase.LockBasePurchase:FindFirstChild("Hitbox")
@@ -122,11 +59,11 @@ task.spawn(function()
 	end
 end)
 
--- Auto-snatch cars from others' bases
+local selling = false
+
 task.spawn(function()
 	while true do
-		local foundValid = false
-
+		if selling then task.wait(1) continue end
 		for _, base in ipairs(Workspace.Bases:GetChildren()) do
 			if base ~= MyBase then
 				for _, descendant in ipairs(base:GetDescendants()) do
@@ -136,26 +73,16 @@ task.spawn(function()
 							HumanoidRootPart.CFrame = parent.CFrame + Vector3.new(0, 3, 0)
 							task.wait(0.3)
 							fireproximityprompt(descendant, 1)
-							foundValid = true
 							break
 						end
 					end
-					if foundValid then break end
 				end
 			end
-			if foundValid then break end
 		end
-
-		if not foundValid then
-			serverHop()
-			break
-		end
-
 		task.wait(0.3)
 	end
 end)
 
--- Auto-sell when exactly 10 "Parts" folders are present, then resume
 task.spawn(function()
 	while true do
 		local slots = MyBase:FindFirstChild("Slots")
@@ -168,7 +95,7 @@ task.spawn(function()
 			end
 
 			if partsCount == 10 then
-				-- Sell all vehicles
+				selling = true
 				for _, obj in ipairs(slots:GetDescendants()) do
 					if obj:IsA("ProximityPrompt") and obj.Name == "SellPrompt" then
 						local parent = obj.Parent
@@ -180,6 +107,8 @@ task.spawn(function()
 						end
 					end
 				end
+				task.wait(3)
+				selling = false
 			end
 		end
 		task.wait(1)
