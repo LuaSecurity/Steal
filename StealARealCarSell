@@ -1,10 +1,11 @@
-repeat wait() until game.Players.LocalPlayer
-repeat wait() until game.Players.LocalPlayer.Character
-repeat wait() until game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
-repeat wait() until game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-repeat wait() until game.Players.LocalPlayer:FindFirstChild("Backpack")
-repeat wait() until game:IsLoaded()
-repeat wait() until workspace:FindFirstChild("Bases")
+-- Wait for essential services and objects to load
+repeat task.wait() until game.Players.LocalPlayer
+repeat task.wait() until game.Players.LocalPlayer.Character
+repeat task.wait() until game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+repeat task.wait() until game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+repeat task.wait() until game.Players.LocalPlayer:FindFirstChild("Backpack")
+repeat task.wait() until game:IsLoaded()
+repeat task.wait() until workspace:FindFirstChild("Bases")
 wait(2)
 
 local Players = game:GetService("Players")
@@ -73,7 +74,8 @@ local function serverHop()
 	end
 end
 
-local MyBase = nil
+-- Find player's base
+local MyBase
 repeat
 	local Bases = Workspace:FindFirstChild("Bases")
 	if Bases then
@@ -88,13 +90,15 @@ repeat
 			end
 		end
 	end
-	wait(1)
+	task.wait(1)
 until MyBase
 
+-- Enlarge hitbox if available
 if MyBase:FindFirstChild("BuyHitbox") then
 	MyBase.BuyHitbox.Size = Vector3.new(2000, 2000, 2000)
 end
 
+-- Destroy walls/beams of other bases
 for _, base in ipairs(Workspace.Bases:GetChildren()) do
 	if base ~= MyBase then
 		for _, part in ipairs(base:GetDescendants()) do
@@ -105,6 +109,7 @@ for _, base in ipairs(Workspace.Bases:GetChildren()) do
 	end
 end
 
+-- Auto-touch purchase hitbox
 task.spawn(function()
 	while true do
 		local hitbox = MyBase:FindFirstChild("LockBasePurchase") and MyBase.LockBasePurchase:FindFirstChild("Hitbox")
@@ -117,6 +122,7 @@ task.spawn(function()
 	end
 end)
 
+-- Auto-snatch cars from others' bases
 task.spawn(function()
 	while true do
 		local foundValid = false
@@ -149,6 +155,7 @@ task.spawn(function()
 	end
 end)
 
+-- Auto-sell when exactly 10 "Parts" folders are present, then resume
 task.spawn(function()
 	while true do
 		local slots = MyBase:FindFirstChild("Slots")
@@ -160,7 +167,8 @@ task.spawn(function()
 				end
 			end
 
-			if partsCount >= 10 then
+			if partsCount == 10 then
+				-- Sell all vehicles
 				for _, obj in ipairs(slots:GetDescendants()) do
 					if obj:IsA("ProximityPrompt") and obj.Name == "SellPrompt" then
 						local parent = obj.Parent
