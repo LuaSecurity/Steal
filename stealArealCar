@@ -1,0 +1,43 @@
+local Players = game:GetService("Players")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+
+local PLACE_ID = game.PlaceId
+local visitedServers = { [game.JobId] = true } -- Store the current server to avoid revisiting
+
+-- Server hop function
+local function serverHop()
+	local servers = {}
+	local req = syn and syn.request or http and http.request or http_request or request
+	if not req then return end
+
+	local cursor = nil
+	repeat
+		local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(PLACE_ID)
+		if cursor then
+			url = url .. "&cursor=" .. cursor
+		end
+
+		local response = req({ Url = url })
+		if response and response.StatusCode == 200 then
+			local data = HttpService:JSONDecode(response.Body)
+			for _, server in ipairs(data.data) do
+				if server.playing < server.maxPlayers and not visitedServers[server.id] then
+					table.insert(servers, server.id)
+				end
+			end
+			cursor = data.nextPageCursor
+		else
+			break
+		end
+	until not cursor or #servers >= 5
+
+	if #servers > 0 then
+		local selectedServer = servers[math.random(1, #servers)]
+		visitedServers[selectedServer] = true
+		TeleportService:TeleportToPlaceInstance(PLACE_ID, selectedServer, LocalPlayer)
+	end
+end
