@@ -1,11 +1,5 @@
-repeat task.wait() until game.Players.LocalPlayer
-repeat task.wait() until game.Players.LocalPlayer.Character
-repeat task.wait() until game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
-repeat task.wait() until game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-repeat task.wait() until game.Players.LocalPlayer:FindFirstChild("Backpack")
-repeat task.wait() until game:IsLoaded()
-repeat task.wait() until workspace:FindFirstChild("Bases")
-wait(2)
+repeat task.wait() until game:IsLoaded() and game.Players.LocalPlayer and game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+repeat task.wait() until workspace:FindFirstChild("Bases") and game.Players.LocalPlayer:FindFirstChild("Backpack")
 
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
@@ -13,38 +7,49 @@ local HttpService = game:GetService("HttpService")
 local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+local HumanoidRootPart = LocalPlayer.Character:WaitForChild("HumanoidRootPart")
 local PLACE_ID = game.PlaceId
 local visitedServers = { [game.JobId] = true }
-local MyBase, currentState = nil, "stealing"
+local currentState = "stealing"
+
+local MyBase
+repeat
+	for _, base in ipairs(Workspace.Bases:GetChildren()) do
+		local label = base:FindFirstChild("Title")
+			and base.Title:FindFirstChild("NameGui")
+			and base.Title.NameGui:FindFirstChild("TextLabel")
+		if label and label.Text == LocalPlayer.Name then
+			MyBase = base
+			break
+		end
+	end
+	task.wait(1)
+until MyBase
 
 local function serverHop()
 	local req = syn and syn.request or http and http.request or http_request or request
 	if not req then return end
 
-	local function getServers()
-		local list, cursor = {}, nil
-		repeat
-			local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(PLACE_ID)
-			if cursor then url = url .. "&cursor=" .. cursor end
-			local response = req({ Url = url })
-			if response and response.StatusCode == 200 then
-				local data = HttpService:JSONDecode(response.Body)
-				for _, server in ipairs(data.data) do
-					if server.playing < server.maxPlayers and not visitedServers[server.id] and server.id ~= game.JobId then
-						table.insert(list, server.id)
-					end
-				end
-				cursor = data.nextPageCursor
-			else
-				break
-			end
-		until not cursor or #list >= 5
-		return list
-	end
+	local servers = {}
+	local cursor = nil
 
-	local servers = getServers()
+	repeat
+		local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(PLACE_ID)
+		if cursor then url = url .. "&cursor=" .. cursor end
+		local response = req({ Url = url })
+		if response and response.StatusCode == 200 then
+			local data = HttpService:JSONDecode(response.Body)
+			for _, server in ipairs(data.data) do
+				if server.playing < server.maxPlayers and not visitedServers[server.id] and server.id ~= game.JobId then
+					table.insert(servers, server.id)
+				end
+			end
+			cursor = data.nextPageCursor
+		else
+			break
+		end
+	until not cursor or #servers >= 5
+
 	if #servers > 0 then
 		local selected = servers[math.random(1, #servers)]
 		visitedServers[selected] = true
@@ -53,56 +58,18 @@ local function serverHop()
 	end
 end
 
-repeat
-	local Bases = Workspace:FindFirstChild("Bases")
-	if Bases then
-		for _, base in ipairs(Bases:GetChildren()) do
-			local label = base:FindFirstChild("Title")
-				and base.Title:FindFirstChild("NameGui")
-				and base.Title.NameGui:FindFirstChild("TextLabel")
-			if label and label.Text == LocalPlayer.Name then
-				MyBase = base
-				break
-			end
-		end
-	end
-	wait(1)
-until MyBase
+MyBase.BuyHitbox.Size = Vector3.new(2500, 2500, 2500)
 
-if MyBase:FindFirstChild("BuyHitbox") then
-	MyBase.BuyHitbox.Size = Vector3.new(2000, 2000, 2000)
-end
-
-for _, base in ipairs(Workspace.Bases:GetChildren()) do
-	if base ~= MyBase then
-		for _, part in ipairs(base:GetDescendants()) do
-			if part:IsA("BasePart") and (part.Name == "Wall" or part.Name == "Beam") then
-				part:Destroy()
-			end
-		end
-	end
-end
-
+-- Check folders count and switch states
 task.spawn(function()
 	while true do
-		local hitbox = MyBase:FindFirstChild("LockBasePurchase") and MyBase.LockBasePurchase:FindFirstChild("Hitbox")
-		if hitbox then
-			firetouchinterest(hitbox, HumanoidRootPart, 0)
-			task.wait(0.05)
-			firetouchinterest(hitbox, HumanoidRootPart, 1)
-		end
-		task.wait(0.1)
-	end
-end)
-
--- MASTER CONTROL LOOP
-task.spawn(function()
-	while true do
-		local parts = MyBase:FindFirstChild("Slots") and MyBase.Slots:GetChildren() or {}
+		local slots = MyBase:FindFirstChild("Slots")
 		local count = 0
-		for _, obj in ipairs(parts) do
-			if obj:IsA("Folder") and obj.Name == "Parts" then
-				count += 1
+		if slots then
+			for _, folder in ipairs(slots:GetChildren()) do
+				if folder:IsA("Folder") and folder.Name == "Parts" then
+					count += 1
+				end
 			end
 		end
 
@@ -112,46 +79,44 @@ task.spawn(function()
 			currentState = "stealing"
 		end
 
-		task.wait(1)
+		task.wait(0.5)
 	end
 end)
 
--- SELL VEHICLES
+-- Selling logic (priority)
 task.spawn(function()
 	while true do
-		if currentState ~= "selling" then task.wait(1) continue end
+		if currentState ~= "selling" then task.wait(0.5) continue end
 
-		local folders = {}
-		for _, f in ipairs(MyBase.Slots:GetChildren()) do
-			if f:IsA("Folder") and f.Name == "Parts" then
-				table.insert(folders, f)
-			end
-		end
-
-		for _, folder in ipairs(folders) do
-			for _, obj in ipairs(folder:GetDescendants()) do
-				if obj:IsA("ProximityPrompt") and obj.Name == "SellPrompt" then
-					local parent = obj.Parent
-					if parent and parent:IsA("BasePart") then
-						HumanoidRootPart.CFrame = parent.CFrame + Vector3.new(0, 3, 0)
-						task.wait(0.3)
-						fireproximityprompt(obj, 1)
-						task.wait(0.3)
+		local slots = MyBase:FindFirstChild("Slots")
+		if slots then
+			for _, folder in ipairs(slots:GetChildren()) do
+				if folder:IsA("Folder") and folder.Name == "Parts" then
+					for _, obj in ipairs(folder:GetDescendants()) do
+						if obj:IsA("ProximityPrompt") and obj.Name == "SellPrompt" then
+							local parent = obj.Parent
+							if parent and parent:IsA("BasePart") then
+								HumanoidRootPart.CFrame = parent.CFrame + Vector3.new(0, 3, 0)
+								task.wait(0.2)
+								fireproximityprompt(obj, 1)
+								task.wait(0.2)
+							end
+						end
 					end
 				end
 			end
 		end
 
-		task.wait(2)
+		task.wait(1)
 	end
 end)
 
--- STEAL VEHICLES
+-- Stealing logic (only if not selling)
 task.spawn(function()
 	while true do
 		if currentState ~= "stealing" then task.wait(1) continue end
-		local found = false
 
+		local found = false
 		for _, base in ipairs(Workspace.Bases:GetChildren()) do
 			if base ~= MyBase then
 				for _, descendant in ipairs(base:GetDescendants()) do
