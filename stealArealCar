@@ -6,8 +6,6 @@ repeat wait() until game.Players.LocalPlayer.Character:FindFirstChild("HumanoidR
 repeat wait() until game.Players.LocalPlayer:FindFirstChild("Backpack")
 repeat wait() until game:IsLoaded()
 repeat wait() until workspace:FindFirstChild("Bases")
-repeat wait() until workspace:FindFirstChild("CurrentCamera")
-repeat wait() until game.Players.LocalPlayer:FindFirstChild("PlayerGui")
 
 -- Serviços
 local Players = game:GetService("Players")
