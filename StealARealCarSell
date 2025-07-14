@@ -125,9 +125,9 @@ task.spawn(function()
 			if base ~= MyBase then
 				for _, descendant in ipairs(base:GetDescendants()) do
 					if descendant:IsA("ProximityPrompt") and descendant.Name == "SnatchPrompt" then
-						local promptParent = descendant.Parent
-						if promptParent then
-							HumanoidRootPart.CFrame = promptParent.CFrame + Vector3.new(0, 3, 0)
+						local parent = descendant.Parent
+						if parent and parent:IsA("BasePart") then
+							HumanoidRootPart.CFrame = parent.CFrame + Vector3.new(0, 3, 0)
 							task.wait(0.2)
 							fireproximityprompt(descendant)
 							foundValid = true
