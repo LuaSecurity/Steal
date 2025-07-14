@@ -1,4 +1,4 @@
--- Services
+-- Aguarda tudo carregar
 repeat wait() until game.Players.LocalPlayer
 repeat wait() until game.Players.LocalPlayer.Character
 repeat wait() until game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
@@ -9,66 +9,78 @@ repeat wait() until workspace:FindFirstChild("Bases")
 repeat wait() until workspace:FindFirstChild("CurrentCamera")
 repeat wait() until game.Players.LocalPlayer:FindFirstChild("PlayerGui")
 
+-- Serviços
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
 local Workspace = game:GetService("Workspace")
 
--- Player setup
+-- Player e Character
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
-for i = 1, 100 do
-print('works')
-end
--- Game info
+
+-- Dados do jogo
 local PLACE_ID = game.PlaceId
 local visitedServers = { [game.JobId] = true }
 
--- Server hopping
+-- Espera até mudar de servidor
+local function waitForServerChange(currentJobId)
+	repeat task.wait(1) until game.JobId ~= currentJobId
+end
+
+-- Server Hop (até realmente mudar de servidor)
 local function serverHop()
-	local servers = {}
+	local currentJobId = game.JobId
 	local req = syn and syn.request or http and http.request or http_request or request
 	if not req then
-		warn("No HTTP request function available.")
+		warn("Nenhuma função de requisição HTTP encontrada.")
 		return
 	end
 
-	local cursor = nil
-	repeat
-		local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(PLACE_ID)
-		if cursor then
-			url = url .. "&cursor=" .. cursor
-		end
+	local function getServers()
+		local serverList = {}
+		local cursor = nil
 
-		local response = req({ Url = url })
-		if response and response.StatusCode == 200 then
-			local data = HttpService:JSONDecode(response.Body)
-			for _, server in ipairs(data.data) do
-				if server.playing < server.maxPlayers and not visitedServers[server.id] then
-					table.insert(servers, server.id)
+		repeat
+			local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(PLACE_ID)
+			if cursor then url = url .. "&cursor=" .. cursor end
+
+			local response = req({ Url = url })
+			if response and response.StatusCode == 200 then
+				local data = HttpService:JSONDecode(response.Body)
+				for _, server in ipairs(data.data) do
+					if server.playing < server.maxPlayers and not visitedServers[server.id] and server.id ~= currentJobId then
+						table.insert(serverList, server.id)
+					end
 				end
+				cursor = data.nextPageCursor
+			else
+				break
 			end
-			cursor = data.nextPageCursor
-		else
+		until not cursor or #serverList >= 5
+
+		return serverList
+	end
+
+	while true do
+		local foundServers = getServers()
+		if #foundServers > 0 then
+			local selectedServer = foundServers[math.random(1, #foundServers)]
+			visitedServers[selectedServer] = true
+
+			queueonteleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/LuaSecurity/Steal/refs/heads/main/stealArealCar'))()")
+			TeleportService:TeleportToPlaceInstance(PLACE_ID, selectedServer, LocalPlayer)
+			waitForServerChange(currentJobId)
 			break
+		else
+			warn("Nenhum servidor válido encontrado. Tentando novamente em 5 segundos...")
+			task.wait(5)
 		end
-	until not cursor or #servers >= 5
-
-	if #servers > 0 then
-		local selectedServer = servers[math.random(1, #servers)]
-		visitedServers[selectedServer] = true
-
-		-- ✅ Queue script for next server
-		queueonteleport("loadstring(game:HttpGet('https://raw.githubusercontent.com/LuaSecurity/Steal/refs/heads/main/stealArealCar'))()")
-
-		TeleportService:TeleportToPlaceInstance(PLACE_ID, selectedServer, LocalPlayer)
-	else
-		warn("No new servers found to hop to.")
 	end
 end
 
--- Locate player base
+-- Identifica a base do jogador
 local Bases = Workspace:WaitForChild("Bases"):GetChildren()
 local MyBase = nil
 
@@ -84,16 +96,16 @@ for _, base in ipairs(Bases) do
 end
 
 if not MyBase then
-	warn("Player base not found.")
+	warn("Sua base não foi encontrada.")
 	return
 end
 
--- Increase your base hitbox
+-- Aumenta hitbox da sua base
 if MyBase:FindFirstChild("BuyHitbox") then
 	MyBase.BuyHitbox.Size = Vector3.new(2000, 2000, 2000)
 end
 
--- Remove walls from other bases
+-- Remove paredes de outras bases
 for _, base in ipairs(Bases) do
 	if base ~= MyBase then
 		for _, part in ipairs(base:GetDescendants()) do
@@ -104,11 +116,10 @@ for _, base in ipairs(Bases) do
 	end
 end
 
--- Activate touch on your base repeatedly
+-- Ativa o toque automático na base
 task.spawn(function()
 	while true do
-		local hitbox = MyBase:FindFirstChild("LockBasePurchase")
-			and MyBase.LockBasePurchase:FindFirstChild("Hitbox")
+		local hitbox = MyBase:FindFirstChild("LockBasePurchase") and MyBase.LockBasePurchase:FindFirstChild("Hitbox")
 		if hitbox and HumanoidRootPart then
 			firetouchinterest(hitbox, HumanoidRootPart, 0)
 			task.wait(0.05)
@@ -118,7 +129,7 @@ task.spawn(function()
 	end
 end)
 
--- Loop to find and snatch valid targets, or hop servers
+-- Snatch automático ou hop
 task.spawn(function()
 	while true do
 		local foundValid = false
@@ -148,7 +159,7 @@ task.spawn(function()
 
 		if not foundValid then
 			serverHop()
-			break -- stop loop after hopping
+			break
 		end
 
 		task.wait(0.3)
